@@ -22,6 +22,9 @@
   button.op small { display: block; color: var(--cinza); font-size: .82rem; margin-top: 2px; }
   button.op.sel { background: var(--cor); border-color: var(--cor); color: #fff; }
   button.op.sel small { color: #fde4ec; }
+  button.op.lotado { background: #f7f1f3; border-color: #f0e4e9; color: #b9a9b0; cursor: not-allowed; }
+  button.op.lotado span { text-decoration: line-through; }
+  button.op.lotado small { color: #c9b9c0; font-size: .72rem; }
   label { display: block; font-size: .9rem; margin-bottom: 4px; }
   input { width: 100%; padding: 12px; border: 1px solid var(--borda); border-radius: 12px; font: inherit; margin-bottom: 12px; }
   .btn { display: block; width: 100%; padding: 14px; border: 0; border-radius: 12px; background: var(--cor); color: #fff; font: inherit; font-weight: 600; cursor: pointer; text-align: center; text-decoration: none; }
@@ -91,7 +94,8 @@
   const $ = id => document.getElementById(id);
 
   async function chamar(params) {
-    const r = await fetch(API + '?' + new URLSearchParams(params));
+    // _ = carimbo de tempo, para o navegador nunca reaproveitar uma resposta antiga
+    const r = await fetch(API + '?' + new URLSearchParams({ ...params, _: Date.now() }), { cache: 'no-store' });
     const j = await r.json();
     if (j.erro) throw new Error(j.erro);
     return j;
@@ -110,12 +114,13 @@
     return SEMANA[new Date(a, m - 1, d).getDay()] + ', ' + String(d).padStart(2, '0') + '/' + String(m).padStart(2, '0');
   }
 
-  function botao(titulo, sub, aoClicar) {
+  function botao(titulo, sub, aoClicar, lotado) {
     const b = document.createElement('button');
     b.type = 'button';
-    b.className = 'op';
-    b.textContent = titulo;
+    b.className = 'op' + (lotado ? ' lotado' : '');
+    const t = document.createElement('span'); t.textContent = titulo; b.append(t);
     if (sub) { const s = document.createElement('small'); s.textContent = sub; b.append(s); }
+    if (lotado) { b.disabled = true; b.title = 'Sem horários livres'; return b; }
     b.onclick = () => {
       [...b.parentNode.children].forEach(x => x.classList.remove('sel'));
       b.classList.add('sel');
@@ -138,14 +143,27 @@
   }
 
   // ---------- passos ----------
-  function escolherProc(p) {
+  async function escolherProc(p) {
     est.proc = p; est.data = null; est.hora = null;
     const dias = $('dias');
-    dias.replaceChildren();
-    if (!cfg.dias.length) msg(dias, 'Não há dias disponíveis no momento.');
-    cfg.dias.forEach(d => dias.append(botao(dataBonita(d), '', () => escolherData(d))));
+    const meu = ++pedidoAtual;
+    msg(dias, 'Verificando dias disponíveis…');
     mostrar('s-data', true); mostrar('s-hora', false); mostrar('s-dados', false);
     rolarPara('s-data');
+
+    let lista;
+    try {
+      lista = (await chamar({ acao: 'dias', proc: p.id })).dias;
+    } catch (e) {
+      lista = cfg.dias.map(d => ({ data: d, livres: 1 }));   // se falhar, mostra todos
+    }
+    if (meu !== pedidoAtual) return;
+
+    dias.replaceChildren();
+    if (!lista.length) return msg(dias, 'Não há dias disponíveis no momento.');
+    lista.forEach(({ data, livres }) =>
+      dias.append(botao(dataBonita(data), livres ? '' : 'lotado', () => escolherData(data), !livres))
+    );
   }
 
   async function escolherData(d) {
