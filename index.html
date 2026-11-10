@@ -29,6 +29,7 @@
   .msg { color: var(--cinza); font-size: .92rem; margin: 0; }
   .erro { color: #b00020; font-size: .92rem; margin: 8px 0 0; }
   .resumo { background: var(--fundo); border-radius: 12px; padding: 12px; margin-bottom: 12px; font-size: .95rem; line-height: 1.5; }
+  .aviso { background: #fff8e6; border: 1px solid #f3d38a; color: #5c4400; border-radius: 12px; padding: 12px; font-size: .88rem; line-height: 1.45; margin-bottom: 12px; }
   .ok { text-align: center; }
   .ok .icone { font-size: 2.4rem; }
 </style>
@@ -62,15 +63,21 @@
     <input id="nome" autocomplete="name" maxlength="60">
     <label for="tel">WhatsApp com DDD</label>
     <input id="tel" type="tel" inputmode="numeric" autocomplete="tel" placeholder="(11) 99999-9999" maxlength="16">
-    <button id="confirmar" class="btn" type="button">Confirmar agendamento</button>
+    <div class="aviso">
+      <strong>⚠️ Atenção:</strong> cancelamentos devem ser realizados com, no mínimo, 48 horas de antecedência.
+      Em caso de não comparecimento ou cancelamento fora desse prazo, será cobrada uma taxa de 40% do valor
+      do procedimento para a realização de um novo agendamento.
+    </div>
+    <button id="confirmar" class="btn" type="button">Solicitar agendamento</button>
     <p id="erro" class="erro"></p>
   </section>
 
   <section id="s-ok" class="oculto ok">
-    <div class="icone">✅</div>
-    <h2>Agendado!</h2>
+    <div class="icone">📩</div>
+    <h2>Solicitação de agendamento realizada!</h2>
     <div id="resumo-ok" class="resumo"></div>
-    <a id="zap" class="btn" target="_blank" rel="noopener">Avisar o salão no WhatsApp</a>
+    <p class="msg" style="margin-bottom:14px">Para confirmar sua reserva, clique no botão abaixo e envie os dados do agendamento pelo WhatsApp. Aguarde nossa confirmação.</p>
+    <a id="zap" class="btn" target="_blank" rel="noopener">Enviar pelo WhatsApp</a>
   </section>
 </main>
 
@@ -180,7 +187,7 @@
       await chamar({ acao: 'agendar', proc: est.proc.id, data: est.data, hora: est.hora, nome, tel });
       const resumo = textoResumo();
       $('resumo-ok').innerText = resumo;
-      const texto = `Olá! Acabei de agendar pelo link:\n${resumo}\nNome: ${nome}`;
+      const texto = `Olá! Gostaria de confirmar meu agendamento:\n${resumo}\nNome: ${nome}`;
       $('zap').href = `https://wa.me/${cfg.whatsapp}?text=${encodeURIComponent(texto)}`;
       ['s-proc', 's-data', 's-hora', 's-dados'].forEach(id => mostrar(id, false));
       mostrar('s-ok', true);
